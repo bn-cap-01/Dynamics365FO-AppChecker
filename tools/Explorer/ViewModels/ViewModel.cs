@@ -1,6 +1,7 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 using BaseXInterface;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -329,25 +330,33 @@ namespace XppReasoningWpf.ViewModels
                 var settings = Properties.Settings.Default;
                 timer.Start();
 
-                var resultingQuery = await evaluator.EvaluatePromptAsync(query);
-
-                // Condition the result from the AI to get the query
-                // and the explanation.
-                var generatedBasexQuery = ExtractBetweenStrings(resultingQuery.Item1, "Query->", "<-Query");
-                var explanation = ExtractBetweenStrings(resultingQuery.Item1, "E->", "<-E");
                 var basexQuery = string.Empty;
-
-                if (generatedBasexQuery.Any())
+                if (Secrets.ApiKey == null)
                 {
-                    // The system provided a query, so use it.
-                    basexQuery = generatedBasexQuery;
+                    basexQuery = query;
+                    this.Log = $"{query}";
                 }
                 else
-                {
-                    basexQuery = ExtractBetweenStrings(resultingQuery.Item1, "ProvidedQuery->", "<-ProvidedQuery");
-                }
-                this.Log = $"Query: {query}\n\nbasexQuery: {basexQuery}\n\nExplanation: {explanation}\n\n";
+                { 
+                    var resultingQuery = await evaluator.EvaluatePromptAsync(query);
 
+                    // Condition the result from the AI to get the query
+                    // and the explanation.
+                    var generatedBasexQuery = ExtractBetweenStrings(resultingQuery.Item1, "Query->", "<-Query");
+                    var explanation = ExtractBetweenStrings(resultingQuery.Item1, "E->", "<-E");
+                
+
+                    if (generatedBasexQuery.Any())
+                    {
+                        // The system provided a query, so use it.
+                        basexQuery = generatedBasexQuery;
+                    }
+                    else
+                    {
+                        basexQuery = ExtractBetweenStrings(resultingQuery.Item1, "ProvidedQuery->", "<-ProvidedQuery");
+                    }
+                    this.Log = $"Query: {query}\n\nbasexQuery: {basexQuery}\n\nExplanation: {explanation}\n\n";
+                }
                 result = await session.DoQueryAsync(basexQuery,
                     new Tuple<string, string>("database", model.SelectedDatabase.Name),
                     new Tuple<string, string>("server", model.HostName),
